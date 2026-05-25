@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Parla con Me">
+<meta name="application-name" content="Parla con Me">
+<meta name="theme-color" content="#FF6B35">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Parla con Me 🃏</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { height: 100%; min-height: 100%; background: #fff; }
+  body {
+    height: 100%;
+    min-height: 100%;
+    font-family: 'Fredoka One', cursive;
+    background: #fff;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input {
+    -webkit-user-select: text;
+    user-select: text;
+    font-size: 16px;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; width: 100vw; height: 100dvh; min-height: 100dvh; }
+  .screen.active { display: flex; }
+
+  /* HOME */
+  #screen-home {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  }
+  #screen-home svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .home-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(255,209,93,0.15) 0%, rgba(255,150,50,0.25) 60%, rgba(0,0,0,0.08) 100%);
+  }
+  .home-card {
+    position: relative; z-index: 10;
+    background: rgba(255,255,255,0.93);
+    border-radius: 32px;
+    padding: 32px 32px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    width: min(92vw, 420px);
+  }
+  .home-card h1 { font-family: 'Fredoka One', cursive; font-size: clamp(36px,8vw,52px); color: #FF6B35; line-height: 1.1; }
+  .home-card p { font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 700; color: #6b7280; }
+  .home-card .emoji { font-size: 48px; }
+
+  /* NOMI */
+  #screen-nomi {
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: max(24px, env(safe-area-inset-top)) 16px max(56px, env(safe-area-inset-bottom));
+  }
+  .nomi-inner { width: 100%; max-width: 520px; }
+  .nomi-box {
+    background: white;
+    border-radius: 28px;
+    padding: 32px 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    margin-top: 0;
+  }
+  .nomi-box h2 { font-family: 'Fredoka One', cursive; font-size: 28px; color: #4F46E5; margin-bottom: 4px; text-align: center; }
+  .nomi-box .sub { font-family: 'Nunito', sans-serif; font-size: 14px; color: #6b7280; text-align: center; font-weight: 600; margin-bottom: 20px; }
+  .nome-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .nome-num {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #e5e7eb;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-family: 'Fredoka One', cursive; font-size: 14px;
+    flex-shrink: 0; transition: background 0.3s;
+  }
+  .nome-input {
+    border: 3px solid #e5e7eb; border-radius: 16px;
+    padding: 12px 16px; font-size: 16px;
+    font-family: 'Nunito', sans-serif; font-weight: 700;
+    width: 100%; outline: none; background: #fafafa; color: #1f2937;
+    transition: border-color 0.2s, background 0.2s;
+    -webkit-appearance: none;
+  }
+  .nome-input:focus { border-color: #6366F1; background: white; }
+  .nome-input::placeholder { color: #9ca3af; font-weight: 600; }
+  .nomi-status { margin-top: 10px; text-align: center; font-size: 13px; color: #9ca3af; font-family: 'Nunito', sans-serif; font-weight: 600; }
+  .nomi-status.ok { color: #10B981; }
+
+  /* GIOCO */
+  #screen-gioco {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+    transition: background 0.5s;
+    overflow: hidden;
+  }
+  .gioco-header {
+    position: absolute; top: max(20px, env(safe-area-inset-top));
+    left: 20px; right: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .pallini { display: flex; align-items: center; gap: 6px; }
+  .pallino {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block; transition: all 0.3s;
+  }
+  .gioco-center { display: flex; flex-direction: column; align-items: center; gap: 24px; width: 100%; max-width: 500px; }
+
+  /* CARTE */
+  .card-domanda {
+    background: white;
+    border-radius: 28px;
+    padding: 36px 28px 28px;
+    box-shadow: 0 8px 0 #d1d5db, 0 20px 50px rgba(0,0,0,0.12);
+    width: 92%; max-width: 460px;
+    position: relative; overflow: hidden;
+  }
+  .card-accent { position: absolute; top: 0; left: 0; right: 0; height: 8px; border-radius: 28px 28px 0 0; }
+  .card-tag {
+    display: inline-block; border-radius: 20px;
+    padding: 5px 16px; font-size: 14px;
+    font-family: 'Nunito', sans-serif; font-weight: 800;
+    margin-bottom: 14px; color: white;
+  }
+  .card-testo {
+    font-size: clamp(17px, 4vw, 22px);
+    line-height: 1.6;
+    font-family: 'Nunito', sans-serif; font-weight: 800; color: #1f2937;
+  }
+  .card-footer { margin-top: 20px; display: flex; align-items: center; gap: 8px; }
+  .card-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .card-nome-small { font-size: 13px; color: #9ca3af; font-family: 'Nunito', sans-serif; font-weight: 600; }
+
+  .card-gruppo {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 28px;
+    padding: 32px 28px;
+    box-shadow: 0 8px 0 #4c1d95, 0 20px 50px rgba(102,126,234,0.4);
+    width: 92%; max-width: 460px;
+    text-align: center;
+  }
+  .card-gruppo .emoji-big { font-size: 38px; margin-bottom: 12px; }
+  .card-gruppo .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2); border-radius: 14px;
+    padding: 6px 18px; font-size: 12px;
+    font-family: 'Nunito', sans-serif; font-weight: 800;
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 18px;
+  }
+  .card-gruppo .testo {
+    font-size: clamp(17px, 4vw, 21px);
+    line-height: 1.55; font-family: 'Nunito', sans-serif; font-weight: 800;
+  }
+  .card-gruppo .sub {
+    margin-top: 18px;
+    border-top: 2px solid rgba(255,255,255,0.2);
+    padding-top: 14px; font-size: 13px; opacity: 0.8;
+    font-family: 'Nunito', sans-serif; font-weight: 600;
+  }
+
+  .carta-counter {
+    position: absolute;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    font-size: 12px; font-family: 'Nunito', sans-serif; color: #9ca3af;
+  }
+
+  /* BOTTONI */
+  .btn-main {
+    background: #FF6B35; color: white;
+    border: none; border-radius: 30px;
+    padding: 16px 48px; font-size: 24px;
+    font-family: 'Fredoka One', cursive;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #c94e1e, 0 10px 25px rgba(255,107,53,0.4);
+    transition: transform 0.12s, box-shadow 0.12s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-main:hover { transform: translateY(-2px); box-shadow: 0 8px 0 #c94e1e, 0 14px 30px rgba(255,107,53,0.4); }
+  .btn-main:active { transform: translateY(3px); box-shadow: 0 3px 0 #c94e1e; }
+  .btn-main:disabled { background: #aaa; box-shadow: 0 6px 0 #888; cursor: not-allowed; transform: none; }
+
+  .btn-back {
+    background: white; color: #374151;
+    border: 2.5px solid #e5e7eb; border-radius: 20px;
+    padding: 9px 20px; font-size: 15px;
+    font-family: 'Nunito', sans-serif; font-weight: 700;
+    cursor: pointer; transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-back:hover { background: #f3f4f6; }
+  .btn-back.light { color: white; background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.4); }
+
+  .btn-avanti {
+    background: #10B981; color: white;
+    border: none; border-radius: 24px;
+    padding: 15px 40px; font-size: 20px;
+    font-family: 'Fredoka One', cursive;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #059669, 0 8px 20px rgba(16,185,129,0.35);
+    transition: transform 0.12s, box-shadow 0.12s;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+    max-width: 92vw; overflow: hidden; text-overflow: ellipsis;
+  }
+  .btn-avanti:hover { transform: translateY(-2px); }
+  .btn-avanti:active { transform: translateY(3px); box-shadow: 0 2px 0 #059669; }
+
+  /* ANIMAZIONE CARTA */
+  @keyframes cardIn {
+    0% { opacity: 0; transform: translateY(40px) rotate(-2deg) scale(0.92); }
+    100% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  }
+  .card-anim { animation: cardIn 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+  @media (max-height: 700px) {
+    .card-domanda { padding: 28px 22px 20px; }
+    .gioco-center { gap: 16px; }
+    .card-gruppo { padding: 22px 22px; }
+    .card-gruppo .emoji-big { font-size: 28px; margin-bottom: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ HOME ══ -->
+<div id="screen-home" class="screen active">
+  <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="320" fill="#FFD166"/>
+    <circle cx="680" cy="80" r="55" fill="#FF6B35" opacity="0.9"/>
+    <ellipse cx="150" cy="60" rx="60" ry="30" fill="white" opacity="0.8"/>
+    <ellipse cx="190" cy="50" rx="45" ry="28" fill="white" opacity="0.8"/>
+    <ellipse cx="120" cy="55" rx="40" ry="22" fill="white" opacity="0.8"/>
+    <ellipse cx="400" cy="80" rx="50" ry="25" fill="white" opacity="0.7"/>
+    <ellipse cx="440" cy="70" rx="38" ry="22" fill="white" opacity="0.7"/>
+    <rect x="0" y="290" width="800" height="210" fill="#06B6D4"/>
+    <path d="M0 300 Q100 280 200 300 Q300 320 400 300 Q500 280 600 300 Q700 320 800 300 L800 320 Q700 310 600 320 Q500 330 400 320 Q300 310 200 320 Q100 330 0 320 Z" fill="#0891B2"/>
+    <ellipse cx="400" cy="380" rx="420" ry="100" fill="#FBBF24"/>
+    <rect x="0" y="350" width="800" height="150" fill="#F59E0B"/>
+    <path d="M0 320 Q80 305 160 320 Q240 335 320 320 Q400 305 480 320 Q560 335 640 320 Q720 305 800 320" stroke="white" stroke-width="3" fill="none" opacity="0.5"/>
+    <ellipse cx="120" cy="340" rx="50" ry="18" fill="#EF4444"/>
+    <ellipse cx="120" cy="335" rx="50" ry="18" fill="#FF6B6B"/>
+    <line x1="120" y1="338" x2="120" y2="395" stroke="#92400E" stroke-width="4"/>
+    <ellipse cx="680" cy="330" rx="55" ry="20" fill="#8B5CF6"/>
+    <ellipse cx="680" cy="325" rx="55" ry="20" fill="#A78BFA"/>
+    <line x1="680" y1="328" x2="680" y2="390" stroke="#92400E" stroke-width="4"/>
+    <ellipse cx="130" cy="395" rx="45" ry="10" fill="#F97316" opacity="0.7"/>
+    <ellipse cx="670" cy="390" rx="45" ry="10" fill="#EC4899" opacity="0.7"/>
+    <circle cx="200" cy="330" r="18" fill="#FBBF24" stroke="#92400E" stroke-width="2"/>
+    <ellipse cx="200" cy="360" rx="14" ry="20" fill="#3B82F6" stroke="#1D4ED8" stroke-width="2"/>
+    <path d="M186 325 Q200 310 214 325" stroke="#92400E" stroke-width="3" fill="#92400E"/>
+    <circle cx="195" cy="328" r="2.5" fill="#1E293B"/><circle cx="205" cy="328" r="2.5" fill="#1E293B"/>
+    <path d="M194 335 Q200 340 206 335" stroke="#1E293B" stroke-width="2" fill="none"/>
+    <line x1="186" y1="355" x2="168" y2="345" stroke="#FBBF24" stroke-width="5" stroke-linecap="round"/>
+    <line x1="214" y1="355" x2="232" y2="345" stroke="#FBBF24" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="310" cy="370" r="18" fill="#FDE68A" stroke="#92400E" stroke-width="2"/>
+    <ellipse cx="310" cy="400" rx="14" ry="18" fill="#EF4444" stroke="#B91C1C" stroke-width="2"/>
+    <path d="M296 365 Q310 352 324 365" stroke="#713F12" stroke-width="3" fill="#713F12"/>
+    <circle cx="305" cy="368" r="2.5" fill="#1E293B"/><circle cx="315" cy="368" r="2.5" fill="#1E293B"/>
+    <path d="M304 375 Q310 380 316 375" stroke="#1E293B" stroke-width="2" fill="none"/>
+    <circle cx="290" cy="422" r="12" fill="white" stroke="#1D4ED8" stroke-width="2"/>
+    <line x1="290" y1="410" x2="290" y2="434" stroke="#1D4ED8" stroke-width="1.5"/>
+    <line x1="278" y1="422" x2="302" y2="422" stroke="#1D4ED8" stroke-width="1.5"/>
+    <ellipse cx="460" cy="405" rx="30" ry="13" fill="#FBBF24" stroke="#92400E" stroke-width="2"/>
+    <circle cx="490" cy="400" r="16" fill="#FDE68A" stroke="#92400E" stroke-width="2"/>
+    <path d="M478 395 Q490 383 502 395" stroke="#713F12" stroke-width="3" fill="#713F12"/>
+    <rect x="480" y="396" width="8" height="5" rx="2" fill="#374151"/>
+    <rect x="490" y="396" width="8" height="5" rx="2" fill="#374151"/>
+    <line x1="488" y1="399" x2="490" y2="399" stroke="#374151" stroke-width="1.5"/>
+    <circle cx="570" cy="372" r="18" fill="#FBBF24" stroke="#92400E" stroke-width="2"/>
+    <ellipse cx="570" cy="402" rx="13" ry="18" fill="#10B981" stroke="#059669" stroke-width="2"/>
+    <path d="M558 366 Q570 353 582 366" stroke="#92400E" stroke-width="3" fill="#92400E"/>
+    <circle cx="565" cy="370" r="2.5" fill="#1E293B"/><circle cx="575" cy="370" r="2.5" fill="#1E293B"/>
+    <path d="M564 377 Q570 382 576 377" stroke="#1E293B" stroke-width="2" fill="none"/>
+    <line x1="557" y1="395" x2="540" y2="382" stroke="#FBBF24" stroke-width="5" stroke-linecap="round"/>
+    <line x1="583" y1="395" x2="600" y2="382" stroke="#FBBF24" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="370" cy="355" r="18" fill="#FBBF24" stroke="#92400E" stroke-width="2"/>
+    <ellipse cx="370" cy="385" rx="14" ry="19" fill="#6366F1" stroke="#4338CA" stroke-width="2"/>
+    <path d="M358 348 Q370 336 382 348" stroke="#1E293B" stroke-width="3" fill="#1E293B"/>
+    <circle cx="365" cy="353" r="2.5" fill="#1E293B"/><circle cx="375" cy="353" r="2.5" fill="#1E293B"/>
+    <path d="M364 360 Q370 366 376 360" stroke="#1E293B" stroke-width="2" fill="none"/>
+    <circle cx="100" cy="375" r="17" fill="#FECDD3" stroke="#92400E" stroke-width="2"/>
+    <ellipse cx="100" cy="403" rx="15" ry="20" fill="#EC4899" stroke="#BE185D" stroke-width="2"/>
+    <path d="M83 375 Q80 390 82 405" stroke="#92400E" stroke-width="4" fill="none"/>
+    <path d="M117 375 Q120 390 118 405" stroke="#92400E" stroke-width="4" fill="none"/>
+    <path d="M84 372 Q100 358 116 372" stroke="#92400E" stroke-width="4" fill="#92400E"/>
+    <circle cx="95" cy="373" r="2.5" fill="#1E293B"/><circle cx="105" cy="373" r="2.5" fill="#1E293B"/>
+    <path d="M94 380 Q100 385 106 380" stroke="#EC4899" stroke-width="2" fill="none"/>
+    <circle cx="100" cy="358" r="5" fill="#F9A8D4"/>
+    <circle cx="630" cy="360" r="17" fill="#FECDD3" stroke="#92400E" stroke-width="2"/>
+    <ellipse cx="630" cy="388" rx="15" ry="20" fill="#F472B6" stroke="#DB2777" stroke-width="2"/>
+    <path d="M613 360 Q610 378 612 392" stroke="#713F12" stroke-width="4" fill="none"/>
+    <path d="M647 360 Q650 378 648 392" stroke="#713F12" stroke-width="4" fill="none"/>
+    <path d="M613 357 Q630 343 647 357" stroke="#713F12" stroke-width="4" fill="#713F12"/>
+    <circle cx="625" cy="358" r="2.5" fill="#1E293B"/><circle cx="635" cy="358" r="2.5" fill="#1E293B"/>
+    <path d="M624 366 Q630 371 636 366" stroke="#1E293B" stroke-width="2" fill="none"/>
+    <circle cx="630" cy="344" r="5" fill="#FDE68A"/>
+    <circle cx="720" cy="368" r="17" fill="#FECDD3" stroke="#92400E" stroke-width="2"/>
+    <ellipse cx="720" cy="396" rx="15" ry="20" fill="#A78BFA" stroke="#7C3AED" stroke-width="2"/>
+    <path d="M703 368 Q700 385 702 398" stroke="#F59E0B" stroke-width="4" fill="none"/>
+    <path d="M737 368 Q740 385 738 398" stroke="#F59E0B" stroke-width="4" fill="none"/>
+    <path d="M703 364 Q720 350 737 364" stroke="#F59E0B" stroke-width="4" fill="#F59E0B"/>
+    <circle cx="715" cy="366" r="2.5" fill="#1E293B"/><circle cx="725" cy="366" r="2.5" fill="#1E293B"/>
+    <path d="M714 374 Q720 379 726 374" stroke="#1E293B" stroke-width="2" fill="none"/>
+    <line x1="710" y1="388" x2="693" y2="377" stroke="#FECDD3" stroke-width="5" stroke-linecap="round"/>
+    <line x1="730" y1="388" x2="746" y2="377" stroke="#FECDD3" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="520" cy="330" r="17" fill="#FECDD3" stroke="#92400E" stroke-width="2"/>
+    <path d="M503 330 Q500 346 502 358" stroke="#92400E" stroke-width="4" fill="none"/>
+    <path d="M537 330 Q540 346 538 358" stroke="#92400E" stroke-width="4" fill="none"/>
+    <path d="M503 326 Q520 313 537 326" stroke="#92400E" stroke-width="4" fill="#92400E"/>
+    <circle cx="515" cy="329" r="2.5" fill="#1E293B"/><circle cx="525" cy="329" r="2.5" fill="#1E293B"/>
+    <path d="M514 337 Q520 342 526 337" stroke="#1E293B" stroke-width="2" fill="none"/>
+    <line x1="503" y1="345" x2="485" y2="335" stroke="#FECDD3" stroke-width="5" stroke-linecap="round"/>
+    <line x1="537" y1="345" x2="555" y2="335" stroke="#FECDD3" stroke-width="5" stroke-linecap="round"/>
+    <path d="M50 450 L55 440 L60 450 L70 450 L62 457 L65 467 L55 461 L45 467 L48 457 L40 450 Z" fill="#F97316"/>
+    <path d="M740 460 L745 450 L750 460 L760 460 L752 467 L755 477 L745 471 L735 477 L738 467 L730 460 Z" fill="#EF4444"/>
+    <ellipse cx="350" cy="460" rx="12" ry="8" fill="#FDE68A" stroke="#F59E0B" stroke-width="1.5"/>
+    <ellipse cx="420" cy="470" rx="10" ry="7" fill="#FECDD3" stroke="#F9A8D4" stroke-width="1.5"/>
+  </svg>
+  <div class="home-overlay"></div>
+  <div class="home-card">
+    <div class="emoji">🃏</div>
+    <h1>Parla con Me</h1>
+    <p>Il gioco che fa parlare davvero</p>
+    <button class="btn-main" onclick="mostra('nomi')">Inizia 🚀</button>
+  </div>
+</div>
+
+<!-- ══ NOMI ══ -->
+<div id="screen-nomi" class="screen">
+  <div class="nomi-inner">
+    <button class="btn-back light" style="margin-bottom:18px" onclick="mostra('home')">← Indietro</button>
+    <div class="nomi-box">
+      <h2>Chi gioca? 👥</h2>
+      <p class="sub">Inserisci da 2 a 9 nomi</p>
+      <div id="nomi-lista"></div>
+      <div class="nomi-status" id="nomi-status">Aggiungi almeno 2 giocatori per iniziare</div>
+      <div style="margin-top:22px;text-align:center">
+        <button class="btn-main" id="btn-inizia-gioco" disabled onclick="avviaGioco()">Inizia il gioco! 🃏</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GIOCO ══ -->
+<div id="screen-gioco" class="screen">
+  <div class="gioco-header">
+    <button class="btn-back" id="btn-back-gioco" onclick="mostra('nomi')">← Indietro</button>
+    <div class="pallini" id="pallini-container"></div>
+  </div>
+  <div class="gioco-center">
+    <div id="carta-container"></div>
+    <button class="btn-avanti" id="btn-avanti" onclick="avanti()">Avanti</button>
+  </div>
+  <div class="carta-counter" id="carta-counter">Carta #1</div>
+</div>
+
+<script>
+// ══ DATI ══
+const COLORI = ["#FF6B6B","#FFD166","#06D6A0","#118AB2","#EF4444","#8B5CF6","#F97316","#10B981","#3B82F6","#EC4899"];
+
+const DOMANDE_PERSONALI = [
+  "Qual è la cosa di cui vai più fiero nella tua vita fino ad ora?",
+  "Se potessi cambiare una sola decisione del passato, quale sarebbe?",
+  "Qual è la tua più grande paura che non ammetteresti mai ad alta voce?",
+  "Cosa ti fa alzare dal letto la mattina quando non ne hai voglia?",
+  "C'è qualcosa che rimpianti di non aver detto a qualcuno?",
+  "Qual è il momento in cui ti sei sentito davvero libero?",
+  "Se la tua vita fosse un film, a che genere apparterrebbe?",
+  "Qual è la cosa più coraggiosa che hai fatto?",
+  "Cosa ti spaventa di più del futuro?",
+  "C'è una versione di te che non sei mai riuscito a diventare?",
+  "Qual è la cosa che fai solo quando sei da solo e non diresti mai agli altri?",
+  "Qual è il ricordo d'infanzia che ti torna in mente più spesso?",
+  "Se potessi vivere in un'epoca diversa, quale sceglieresti?",
+  "Qual è la lezione più importante che ti ha insegnato una persona difficile?",
+  "Cosa ti rende unico rispetto a chi ti sta intorno?",
+  "Qual è la cosa di cui ti vergogni e che invece dovresti essere fiero?",
+  "C'è qualcosa che hai sempre voluto fare ma che continui a rimandare?",
+  "Chi è la persona che ti ha cambiato di più, nel bene o nel male?",
+  "Qual è il tuo vizio segreto più innocente?",
+  "Cosa faresti domani se scoprissi che hai solo un anno da vivere?",
+  "Qual è la cosa che non ti perdoni ancora?",
+  "Hai mai fatto una cosa che sembrava sbagliata ma era giusta per te?",
+  "Qual è il tuo più grande sogno non realizzato?",
+  "C'è qualcuno a cui devi ancora chiedere scusa?",
+  "Qual è il momento in cui hai capito di essere cresciuto?",
+  "Se potessi parlare con il tuo io di 10 anni fa, cosa gli diresti?",
+  "Qual è la cosa più strana che ti abbia mai emozionato?",
+  "Ti è mai capitato di perdere fiducia in te stesso? Come ne sei uscito?",
+  "Qual è la cosa che ami di te ma che gli altri faticano a capire?",
+  "Cosa cambieresti del mondo se avessi il potere di farlo?"
+];
+const DOMANDE_AMORE = [
+  "Credi nell'amore a prima vista o pensi sia solo attrazione?",
+  "Qual è la cosa più romantica che hai fatto o che ti hanno fatto?",
+  "C'è qualcuno che non hai mai dimenticato del tutto?",
+  "Qual è per te il segnale che una relazione è davvero finita?",
+  "Preferiresti amare tanto o essere tanto amato?",
+  "Credi che si possa amare più di una persona alla volta?",
+  "Qual è la cosa che ti fa innamorare di qualcuno più di tutto il resto?",
+  "Hai mai amato qualcuno che non faceva bene?",
+  "Credi nella lunga distanza? Funziona davvero?",
+  "Qual è la cosa più importante in una coppia?",
+  "Ti sei mai innamorato di un amico? Com'è andata?",
+  "Cosa pensi della gelosia: è amore o possesso?",
+  "Potresti perdonare un tradimento? A quali condizioni?",
+  "Qual è il gesto d'amore più bello che hai ricevuto?",
+  "Credi che ogni persona abbia 'la sua metà'?",
+  "Cosa significa per te sentirsi a casa con qualcuno?",
+  "Hai mai rotto con qualcuno per il motivo sbagliato?",
+  "Cosa ti spaventa di più in una relazione?",
+  "Riesci a essere completamente onesto con chi ami?",
+  "Qual è la differenza tra amare e dipendere?",
+  "Hai mai amato qualcuno che non poteva amarti?",
+  "Credi che il tempo guarisca davvero ogni ferita d'amore?",
+  "Cosa pensi delle relazioni aperte?",
+  "Qual è la cosa che non riusciresti mai a perdonare a un partner?",
+  "L'amicizia tra ex è possibile secondo te?",
+  "Credi che si possa tornare insieme dopo una rottura?",
+  "Cosa significa per te 'fare un passo indietro' in una storia?",
+  "Hai mai lasciato andare qualcuno che amavi perché era la cosa giusta?",
+  "Qual è la cosa più difficile che hai imparato da una storia finita?",
+  "Se potessi rivivere un momento romantico della tua vita, quale sarebbe?"
+];
+const DOMANDE_AMICIZIA = [
+  "Qual è la cosa che apprezzi di più in un amico?",
+  "Hai mai perso un'amicizia importante? Come ci hai fatto i conti?",
+  "Credi che le amicizie vere durino per sempre?",
+  "C'è qualcosa che hai detto a un amico che ancora rimpianti?",
+  "Qual è il gesto più bello che un amico abbia fatto per te?",
+  "Ti è mai capitato di capire che un'amicizia era tossica?",
+  "Preferisci pochi amici profondi o tanti amici superficiali?",
+  "Hai un amico con cui litighi spesso ma non potresti farne a meno?",
+  "Qual è la cosa che farebbe un buon amico che un pessimo amico non farebbe mai?",
+  "Ti sei mai sentito tradito da un amico? Hai perdonato?",
+  "Qual è la cosa più strana che hai fatto con i tuoi amici?",
+  "C'è un amico che non senti da troppo tempo e che vorresti richiamare?",
+  "Cosa pensi delle amicizie nate online?",
+  "Qual è il limite che non supereresti mai per un amico?",
+  "Riesci a essere te stesso al 100% con i tuoi amici?"
+];
+const DOMANDE_VITA = [
+  "Cosa ti dà più significato nella vita quotidiana?",
+  "Credi in qualcosa di più grande di te?",
+  "Hai un rituale che ti aiuta a stare bene?",
+  "Cosa pensi della morte? Ti fa paura?",
+  "Riesci a vivere nel presente o sei sempre proiettato al futuro?",
+  "Qual è la cosa che ti manca di più della tua infanzia?",
+  "Hai mai avuto una crisi esistenziale? Come l'hai superata?",
+  "Cosa significa per te una vita ben vissuta?",
+  "Ci sono cose che fai solo per compiacere gli altri?",
+  "Qual è la cosa che ti fa sentire più vivo?",
+  "Pensi di conoscere davvero te stesso?",
+  "Hai mai cambiato completamente idea su qualcosa di importante?",
+  "Cosa faresti se non avessi paura?",
+  "Qual è la tua definizione personale di successo?",
+  "Ti piace stare da solo o hai paura della solitudine?",
+  "C'è una cosa che fai ogni giorno che ti rende felice?",
+  "Cosa ti dà ansia e come ci convivi?",
+  "Credi nel destino o nel libero arbitrio?",
+  "Cosa pensi del perdono: si fa per gli altri o per se stessi?",
+  "Hai mai incontrato qualcuno che ti ha cambiato in pochi minuti?",
+  "Qual è la cosa più bella che ti abbia mai detto uno sconosciuto?",
+  "Riesci a chiedere aiuto quando ne hai bisogno?",
+  "Cosa ti manca del passato e cosa non ti manca per niente?",
+  "Credi che le persone possano davvero cambiare?",
+  "Cosa pensi della felicità: è una destinazione o un percorso?",
+  "Hai mai avuto un momento di vera illuminazione su qualcosa?",
+  "Qual è la cosa che ti pesa di più in questo periodo?",
+  "Cosa ti fa sentire al sicuro?",
+  "Se potessi eliminare una emozione, quale elimineresti?",
+  "Hai mai fatto qualcosa che ti ha davvero sorpreso?"
+];
+const DOMANDE_ESPERIENZE = [
+  "Qual è l'esperienza più assurda che ti sia mai capitata?",
+  "Hai mai fatto qualcosa che non avresti mai pensato di fare?",
+  "Qual è il posto più bello in cui sei stato?",
+  "Hai mai avuto una coincidenza talmente strana da sembrare impossibile?",
+  "Qual è la cosa più spontanea che hai fatto e ne sei contento?",
+  "Hai mai vissuto un momento di pericolo vero?",
+  "Qual è il viaggio che ti ha cambiato di più?",
+  "Hai mai conosciuto qualcuno che ti ha sconvolto in positivo?",
+  "Qual è il fallimento che ti ha insegnato di più?",
+  "Hai mai fatto qualcosa di cui sei orgoglioso ma che non racconti?",
+  "Qual è la cosa più strana che hai mangiato?",
+  "Hai mai fatto una promessa che poi hai mantenuto contro ogni aspettativa?",
+  "Qual è l'avventura più grande che hai vissuto?",
+  "Hai mai detto 'sì' a qualcosa di cui avevi paura e ne è valsa la pena?",
+  "Qual è la cosa più stupida che hai fatto e che ora ti fa ridere?",
+  "Hai mai avuto un'esperienza che non riesci a spiegare razionalmente?",
+  "Qual è il momento in cui hai riso più forte nella tua vita?",
+  "Hai mai fatto una scelta completamente impulsiva che ha cambiato tutto?",
+  "Qual è la cosa più bella che hai visto con i tuoi occhi?",
+  "Qual è l'errore più costoso (in senso lato) che hai fatto?",
+  "Hai mai vissuto qualcosa che sembrava uscito da un film?",
+  "Qual è l'esperienza che consiglieresti a tutti di fare almeno una volta?",
+  "Hai mai fatto pace con qualcuno dopo anni di silenzio?",
+  "Qual è la cosa più generosa che hai mai fatto?",
+  "Hai mai incontrato qualcuno famoso? Com'è andata?"
+];
+const DOMANDE_DIVERTENTI = [
+  "Se fossi un animale, quale saresti e perché?",
+  "Qual è il tuo superpotere segreto (anche il più assurdo)?",
+  "Se potessi cenare con tre persone famose, vive o morte, chi sceglieresti?",
+  "Qual è la canzone che metti sempre quando sei solo?",
+  "Se la tua vita avesse una colonna sonora, quale sarebbe la canzone principale?",
+  "Qual è il film che hai visto più volte?",
+  "Se potessi vivere in un universo di finzione (libro, film, serie), quale sceglieresti?",
+  "Qual è il tuo guilty pleasure televisivo?",
+  "Se potessi sapere solo una cosa sul tuo futuro, cosa vorresti sapere?",
+  "Qual è il piatto che cucineresti per conquistare qualcuno?",
+  "Se vincessi 10 milioni di euro domani, cosa faresti per prima cosa?",
+  "Qual è la cosa più inutile a cui sei affezionato?",
+  "Se potessi eliminare un'invenzione dalla storia, quale sarebbe?",
+  "Qual è l'app che cancelleresti per sempre dal tuo telefono?",
+  "Se potessi avere un animale domestico qualsiasi, anche un drago, quale?",
+  "Se la tua casa prendesse fuoco e potessi salvare solo una cosa, cosa prenderesti?",
+  "Qual è la cosa più ridicola per cui hai pianto?",
+  "Se potessi essere invisibile per un giorno, cosa faresti?",
+  "Qual è il tuo talento nascosto più inutile?",
+  "Se potessi parlare una lingua in modo perfetto istantaneamente, quale sceglieresti?",
+  "Se dovessi scegliere tra non dormire mai o non mangiare mai, cosa sceglieresti?",
+  "Qual è il tuo comfort food quando stai male?",
+  "Qual è la serie TV che hai abbandonato e che non ti penti di aver lasciato?",
+  "Qual è il tuo rituale prima di dormire?"
+];
+const DOMANDE_ETICHE = [
+  "È giusto mentire per proteggere qualcuno che ami?",
+  "Preferiresti essere felice in modo ingenuo o infelice ma consapevole?",
+  "È più importante essere onesti o essere gentili?",
+  "Salveresti uno sconosciuto a rischio della tua vita?",
+  "Credi che tutti meritino una seconda possibilità?",
+  "È giusto giudicare le persone per le loro scelte passate?",
+  "Preferiresti sapere tutta la verità o vivere in una bella menzogna?",
+  "È possibile essere completamente oggettivi su qualcosa?",
+  "Credi che il fine giustifichi i mezzi?",
+  "Hai mai fatto la cosa giusta sapendo che ti avrebbe fatto del male?",
+  "Si può essere buoni senza credere in Dio, secondo te?",
+  "Cosa pensi dell'eutanasia?",
+  "Credi che la giustizia e la legge coincidano sempre?",
+  "Hai mai tradito i tuoi valori per convenienza?",
+  "Cosa faresti se trovassi un portafoglio con molti soldi per strada?",
+  "È giusto giudicare qualcuno che fa del male senza volerlo?",
+  "Pensi che sia possibile perdonare davvero senza dimenticare?",
+  "Qual è la cosa più difficile moralmente che hai dovuto affrontare?",
+  "Credi che le persone siano responsabili di quello che non fanno?"
+];
+const DOMANDE_SOCIETA = [
+  "I social media ci stanno rendendo più soli o più connessi?",
+  "L'intelligenza artificiale è una minaccia o un'opportunità?",
+  "Pensi che il sistema scolastico prepari davvero alla vita?",
+  "Cosa pensi della pressione dei social sulle nuove generazioni?",
+  "È giusto condividere tutto sui social o ci vuole più riservatezza?",
+  "Pensi che la nostra generazione stia lasciando un mondo migliore o peggiore?",
+  "Cosa pensi della cultura della cancellazione (cancel culture)?",
+  "Il lavoro definisce ancora l'identità di una persona?",
+  "Siamo davvero più tolleranti di 20 anni fa?",
+  "Cosa pensi dell'influencer culture?",
+  "Credi che la politica possa ancora cambiare le cose?",
+  "Cosa pensi del consumismo e della cultura del possesso?",
+  "La ricchezza è merito o fortuna? Cosa pensi della disuguaglianza?",
+  "Pensi che le persone siano fondamentalmente buone o egoiste?",
+  "Cosa pensi della salute mentale: se ne parla abbastanza?",
+  "Pensi che il lavoro da remoto stia cambiando le relazioni sociali?",
+  "Cosa pensi della dipendenza dagli smartphone?",
+  "La libertà di espressione ha dei limiti secondo te?",
+  "Credi che le fake news possano cambiare la realtà?",
+  "Cosa pensi della pressione a essere sempre produttivi?",
+  "Cosa pensi dell'ecoansia tra i giovani?",
+  "Siamo più liberi di scegliere rispetto alle generazioni precedenti?"
+];
+const DOMANDE_EXTRA = [
+  "Cosa pensi della solitudine: è un dono o una punizione?",
+  "Hai mai avuto paura di essere troppo diverso dagli altri?",
+  "Cosa pensi dell'ambizione: è una virtù o un difetto?",
+  "Ti è mai capitato di sentire che stavi vivendo la vita sbagliata?",
+  "Cosa pensi del concetto di 'normalità'?",
+  "Hai mai fatto qualcosa di cui eri convinto fosse giusto ma che tutti disapprovavano?",
+  "Cosa ti emoziona ancora come quando eri bambino?",
+  "Hai mai avuto un sogno (notturno) che ti ha cambiato qualcosa dentro?",
+  "Cosa pensi del coraggio: si nasce coraggiosi o si diventa?",
+  "Qual è la cosa che vorresti che le persone capissero di te senza che tu debba spiegare?",
+  "Hai mai sentito di appartenere a un posto più di ogni altro?",
+  "Qual è la cosa che non cambierei mai di me, nonostante tutto?",
+  "Hai mai vissuto qualcosa che ti ha fatto cambiare completamente prospettiva?",
+  "Cosa pensi dell'invecchiare: ti fa paura o lo accetti?",
+  "Sei la stessa persona che eri 5 anni fa?",
+  "Cosa pensi del sacrificio: è nobile o è una trappola?",
+  "Hai mai sentito di deludere qualcuno che amavi?",
+  "Cosa pensi della gratitudine: la pratichi davvero?",
+  "Qual è la cosa che ti fa sentire che la vita vale la pena di essere vissuta?",
+  "Hai mai incontrato qualcuno che capiva tutto di te al volo?",
+  "Cosa pensi della nostalgia: è un piacere o un dolore?",
+  "Ti è mai capitato di cambiare idea su qualcuno completamente?",
+  "Cosa pensi dell'empatia: è un dono o un peso?",
+  "Qual è la cosa che non vorresti mai perdere di te stesso?",
+  "Hai mai avuto una conversazione che ti ha tenuto sveglio la notte?",
+  "Cosa pensi del silenzio tra due persone: è mai confortante?",
+  "Hai mai aiutato qualcuno senza che nessuno lo sapesse?",
+  "Qual è la cosa che ti manca quando sei lontano da casa?",
+  "Cosa pensi della semplicità: è possibile sceglierla davvero?",
+  "Hai mai detto 'ti voglio bene' e non lo pensavi davvero?",
+  "Cosa pensi dell'educazione che hai ricevuto?",
+  "Hai mai sentito di non appartenere a nessun posto?",
+  "Qual è la cosa più importante che ti abbia insegnato un fallimento?",
+  "Hai mai fatto qualcosa di eroico in modo del tutto ordinario?",
+  "Cosa pensi del silenzio: riesci a starci dentro?",
+  "Qual è la cosa che ti ha sorpreso di più di te stesso?",
+  "Hai mai capito di amare qualcosa solo quando lo hai perso?",
+  "Cosa pensi della fiducia: è facile da ricostruire?",
+  "Qual è la cosa che ti rende orgoglioso della tua famiglia?",
+  "Hai mai avuto una crisi di identità? Come l'hai risolta?",
+  "Cosa pensi dell'accettazione: riesci ad accettare le cose che non puoi cambiare?",
+  "Qual è la cosa che ti ha fatto crescere di più negli ultimi anni?",
+  "Hai mai scelto la strada più difficile consapevolmente?",
+  "Cosa pensi dell'ottimismo: è realistico o ingenuo?",
+  "Qual è la cosa che vorresti che il mondo capisse?",
+  "Hai mai sentito che le parole non bastano per esprimere qualcosa?",
+  "Cosa pensi del tempo: ne hai mai la sensazione di sprecarlo?",
+  "Qual è la cosa che ti fa sentire parte di qualcosa di più grande?"
+];
+
+const DOMANDE_GRUPPO = [
+  "Tutti insieme: qual è il ricordo più bello che avete in comune?",
+  "Tutti insieme: chi del gruppo fareste Re o Regina del mondo per un giorno?",
+  "Tutti insieme: se foste una band, quale genere musicale suonereste?",
+  "Tutti insieme: qual è la cosa più strana che vi sia capitata tutti insieme?",
+  "Tutti insieme: se doveste aprire un'attività insieme, cosa fareste?",
+  "Tutti insieme: qual è la cosa che vi unisce di più come gruppo?",
+  "Tutti insieme: se fossi su un'isola deserta con tutti questi qui, chi sopravvivrebbe?",
+  "Tutti insieme: qual è la persona del gruppo a cui chiedereste consiglio in una crisi?",
+  "Tutti insieme: cosa non farebbe mai nessuno di voi e su cui siete tutti d'accordo?",
+  "Tutti insieme: se il gruppo fosse un film, quale sarebbe?",
+  "Tutti insieme: quale canzone descrive questo gruppo?",
+  "Tutti insieme: se poteste fare un viaggio insieme domani, dove andreste?",
+  "Tutti insieme: chi del gruppo è il più coraggioso e chi il più prudente?",
+  "Tutti insieme: qual è la cosa che fate meglio quando siete insieme?",
+  "Tutti insieme: se doveste scegliere uno di voi come presidente, chi sarebbe e perché?",
+  "Tutti insieme: qual è l'esperienza che vorreste fare tutti insieme prima o poi?",
+  "Tutti insieme: se il gruppo sparisse tra 10 anni, cosa ricordereste di questi momenti?",
+  "Tutti insieme: chi di voi cambierà di più nei prossimi 5 anni?",
+  "Tutti insieme: qual è la cosa più bella di stare insieme in questo momento?",
+  "Tutti insieme: se ognuno di voi fosse un personaggio di un film, chi sarebbe chi?"
+];
+
+const TUTTE = [
+  ...DOMANDE_PERSONALI, ...DOMANDE_AMORE, ...DOMANDE_AMICIZIA,
+  ...DOMANDE_VITA, ...DOMANDE_ESPERIENZE, ...DOMANDE_DIVERTENTI,
+  ...DOMANDE_ETICHE, ...DOMANDE_SOCIETA, ...DOMANDE_EXTRA
+];
+
+// ══ STATO ══
+let mazzo = [];
+let mazzoGruppo = [];
+let giocatori = [];
+let turno = 0;
+let indiceGlobale = 0;
+let indiceGruppo = 0;
+let cartaGruppoAttiva = false;
+let nomiInputs = [];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ══ SCHERMATA ══
+function mostra(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  if (id === 'nomi') costruisciNomi();
+}
+
+// ══ NOMI ══
+function costruisciNomi() {
+  const lista = document.getElementById('nomi-lista');
+  lista.innerHTML = '';
+  nomiInputs = [];
+  for (let i = 0; i < 9; i++) {
+    const row = document.createElement('div');
+    row.className = 'nome-row';
+    const num = document.createElement('span');
+    num.className = 'nome-num';
+    num.id = 'num-' + i;
+    num.textContent = i + 1;
+    const inp = document.createElement('input');
+    inp.className = 'nome-input';
+    inp.placeholder = 'Giocatore ' + (i + 1);
+    inp.maxLength = 20;
+    inp.type = 'text';
+    inp.autocomplete = 'off';
+    inp.addEventListener('input', aggiornaNomi);
+    nomiInputs.push(inp);
+    row.appendChild(num);
+    row.appendChild(inp);
+    lista.appendChild(row);
+  }
+  aggiornaNomi();
+}
+
+function aggiornaNomi() {
+  let validi = 0;
+  nomiInputs.forEach((inp, i) => {
+    const filled = inp.value.trim() !== '';
+    if (filled) validi++;
+    const num = document.getElementById('num-' + i);
+    num.style.background = filled ? COLORI[i % COLORI.length] : '#e5e7eb';
+  });
+  const status = document.getElementById('nomi-status');
+  const btn = document.getElementById('btn-inizia-gioco');
+  if (validi < 2) {
+    const mancano = 2 - validi;
+    status.textContent = 'Aggiungi almeno ' + mancano + ' giocator' + (mancano > 1 ? 'i' : 'e') + ' per iniziare';
+    status.className = 'nomi-status';
+    btn.disabled = true;
+  } else {
+    status.textContent = validi + ' giocator' + (validi === 1 ? 'e' : 'i') + ' pronti! 🎉';
+    status.className = 'nomi-status ok';
+    btn.disabled = false;
+  }
+}
+
+function avviaGioco() {
+  giocatori = nomiInputs.map(i => i.value.trim()).filter(n => n !== '');
+  mazzo = shuffle(TUTTE);
+  mazzoGruppo = shuffle(DOMANDE_GRUPPO);
+  turno = 0;
+  indiceGlobale = 0;
+  indiceGruppo = 0;
+  cartaGruppoAttiva = false;
+  mostra('gioco');
+  renderGioco(true);
+}
+
+// ══ GIOCO ══
+function renderGioco(animate) {
+  const colore = COLORI[turno % COLORI.length];
+
+  const schermo = document.getElementById('screen-gioco');
+  if (cartaGruppoAttiva) {
+    schermo.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
+  } else {
+    schermo.style.background = `linear-gradient(135deg, ${colore}33 0%, ${colore}66 100%)`;
+  }
+
+  const btnBack = document.getElementById('btn-back-gioco');
+  if (cartaGruppoAttiva) {
+    btnBack.className = 'btn-back light';
+  } else {
+    btnBack.className = 'btn-back';
+  }
+
+  const pallini = document.getElementById('pallini-container');
+  pallini.innerHTML = '';
+  giocatori.forEach((_, i) => {
+    const p = document.createElement('span');
+    p.className = 'pallino';
+    if (cartaGruppoAttiva) {
+      p.style.background = 'rgba(255,255,255,0.35)';
+      p.style.transform = 'scale(1)';
+    } else {
+      p.style.background = COLORI[i % COLORI.length];
+      p.style.opacity = i === turno ? '1' : '0.3';
+      p.style.transform = i === turno ? 'scale(1.5)' : 'scale(1)';
+      if (i === turno) p.style.border = '2px solid white';
+      else p.style.border = 'none';
+    }
+    pallini.appendChild(p);
+  });
+
+  const container = document.getElementById('carta-container');
+  container.innerHTML = '';
+
+  let carta;
+  if (cartaGruppoAttiva) {
+    const domanda = mazzoGruppo[indiceGruppo % mazzoGruppo.length];
+    carta = document.createElement('div');
+    carta.className = 'card-gruppo';
+    carta.innerHTML = `
+      <div class="emoji-big">⭐</div>
+      <div class="badge">🌟 Carta per tutti 🌟</div>
+      <p class="testo">${domanda}</p>
+      <div class="sub">Rispondete tutti insieme!</div>
+    `;
+  } else {
+    const domanda = mazzo[indiceGlobale % mazzo.length];
+    carta = document.createElement('div');
+    carta.className = 'card-domanda';
+    carta.innerHTML = `
+      <div class="card-accent" style="background:${colore}"></div>
+      <span class="card-tag" style="background:${colore}">${giocatori[turno]}</span>
+      <p class="card-testo">${domanda}</p>
+      <div class="card-footer">
+        <div class="card-dot" style="background:${colore}"></div>
+        <span class="card-nome-small">Turno di ${giocatori[turno]}</span>
+      </div>
+    `;
+  }
+
+  if (animate) carta.classList.add('card-anim');
+  container.appendChild(carta);
+
+  const btnAvanti = document.getElementById('btn-avanti');
+  if (cartaGruppoAttiva) {
+    const prossimo = giocatori[(turno) % giocatori.length];
+    btnAvanti.textContent = `Avanti → ${prossimo}`;
+  } else if (turno === giocatori.length - 1) {
+    btnAvanti.textContent = 'Avanti → Tutti! ⭐';
+  } else {
+    btnAvanti.textContent = `Avanti → ${giocatori[turno + 1]}`;
+  }
+
+  document.getElementById('carta-counter').textContent = 'Carta #' + (indiceGlobale + 1);
+  document.getElementById('carta-counter').style.color = cartaGruppoAttiva ? 'rgba(255,255,255,0.35)' : '#9ca3af';
+}
+
+function avanti() {
+  if (cartaGruppoAttiva) {
+    cartaGruppoAttiva = false;
+    indiceGruppo++;
+    renderGioco(true);
+  } else {
+    const prossimo = (turno + 1) % giocatori.length;
+    if (prossimo === 0) {
+      turno = 0;
+      indiceGlobale++;
+      cartaGruppoAttiva = true;
+    } else {
+      turno = prossimo;
+      indiceGlobale++;
+    }
+    renderGioco(true);
+  }
+}
+
+costruisciNomi();
+</script>
+</body>
+</html>
